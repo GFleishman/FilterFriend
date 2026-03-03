@@ -87,13 +87,25 @@ class filters_widget:
 
 
 def filter_spots(functions):
-    global viewer, filtered_spots, filtered_points_layer
+    global viewer, original_spots, filtered_points_layer
+
+    # filter the spots
+    filtered_spots = np.copy(original_spots)
     for function in functions:
         filtered_spots = function(filtered_spots)
+
+    # replace layer with updated one
     if filtered_points_layer is not None:
-        viewer.layers.remove(name='filtered-spots')
+        viewer.layers.remove('filtered-spots')
+    features = {
+        'size-z':filtered_spots[:, 3],
+        'size-y':filtered_spots[:, 4],
+        'size-x':filtered_spots[:, 5],
+        'intensity':filtered_spots[:, 6],
+    }
     filtered_points_layer = viewer.add_points(
         data=filtered_spots[:, :3],
+        features=features,
         name='filtered-spots',
         ndim=3,
         border_color='transparent',
@@ -122,7 +134,6 @@ if __name__ == '__main__':
     original_spots = np.loadtxt(sys.argv[2])
     spacing = np.array([float(x) for x in sys.argv[3].split('x')])
     original_spots[:, :3] = np.round(original_spots[:, :3] / spacing).astype(int)
-    filtered_spots = np.copy(original_spots)
 
     # instantiate viewer
     viewer = napari.Viewer()
@@ -133,12 +144,19 @@ if __name__ == '__main__':
         name='hcr-image',
         blending='additive',
         colormap='gray',
-        contrast_limits=[200, 1000],
+        contrast_limits=[200, 300],
     )
 
     # add original points layer
+    features = {
+        'size-z':original_spots[:, 3],
+        'size-y':original_spots[:, 4],
+        'size-x':original_spots[:, 5],
+        'intensity':original_spots[:, 6],
+    }
     original_points_layer = viewer.add_points(
         data=original_spots[:, :3],
+        features=features,
         name='original-spots',
         ndim=3,
         border_color='transparent',
@@ -148,6 +166,7 @@ if __name__ == '__main__':
         size=5,
         out_of_slice_display=True,
         blending='additive',
+        visible=False,
     )
     original_points_layer.mode = 'select'
 
