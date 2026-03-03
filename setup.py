@@ -15,6 +15,7 @@ setuptools.setup(
         'fishspot',
         'pynrrd',
         'napari',
+        'PyQt5',
     ]
 )
 
