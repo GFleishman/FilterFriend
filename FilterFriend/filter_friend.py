@@ -5,6 +5,8 @@ import sys
 from magicgui.widgets import PushButton, ComboBox, Container, FloatSpinBox, SpinBox
 from psygnal import Signal
 from fishspot.filter import percentile_filter, density_filter
+from datetime import datetime
+import json
 
 
 # constants
@@ -16,20 +18,27 @@ FILTER_TYPES = [
 
 class filters_widget:
 
-    def __init__(self, viewer):
-        self.dock_widget = None
+    def __init__(self, viewer, save_prefix):
         self.viewer = viewer
+        self.save_prefix = save_prefix
+        self.dock_widget = None
         self.filter_menu = ComboBox(label='Filter Type', choices=FILTER_TYPES)
         self.add_filter_button = PushButton(text='Add Filter', tooltip='add filter to end of filter list')
         self.add_filter_button.changed.connect(self._add_filter)
         self.run_filters_button = PushButton(text='Run Filters', tooltip='run current filter stack on current spots')
+        self.save_button = PushButton(text='Save', tooltip='Saves filtered-spots into a csv and filter parameters into a text file')
+        self.save_button.changed.connect(self._save)
         self.run_filters_button.changed.connect(self._run_filters)
         self.widgets = [
             self.filter_menu,
             self.add_filter_button,
             self.run_filters_button,
+            self.save_button,
         ]
+        self.nwidgets_before_insert = 2  # these numbers mean we want to insert the widgets after some
+        self.nwidgets_after_insert = 2   #   of the static ones and before some of the other ones
         self._update_viewer()
+
 
     def _add_filter(self):
         filter_type = self.filter_menu.value
@@ -42,8 +51,9 @@ class filters_widget:
             radius = FloatSpinBox(label='radius', value=0., min=0., max=1e12, step=0.1)
             num_neighbors = SpinBox(label='neighbor count', value=0, min=0, max=1e12, step=1)
             container = Container(widgets=[radius, num_neighbors, remove,])
-        self.widgets.insert(-1, container)
+        self.widgets.insert(-self.nwidgets_after_insert, container)
         self._update_viewer()
+
 
     def _remove_filter(self):
         sender = Signal.sender()
@@ -59,6 +69,7 @@ class filters_widget:
                     break
         self._update_viewer()
 
+
     def _update_viewer(self):
         if self.dock_widget is not None:
             self.viewer.window.remove_dock_widget(self.dock_widget)
@@ -68,22 +79,46 @@ class filters_widget:
             area='right',
         )
 
+
     def _run_filters(self):
+        filters = self._parse_filters()
         functions = []
-        for container in self.widgets[2:-1]:
-            if len(container) == 2:
-                percentile = container[0].value
-                functions.append(lambda x: percentile_filter(x, percentile))
-            elif len(container) == 3:
-                radius = container[0].value
-                num_neighbors = container[1].value
+        for iii in range(len(filters.keys())):
+            if filters[iii]['filter_type'] == 'percentile':
+                a = filters[iii]['parameters']['percentile']
+                functions.append(lambda x: percentile_filter(x, a))
+            elif filters[iii]['filter_type'] == 'density':
+                a = filters[iii]['parameters']['radius']
+                b = filters[iii]['parameters']['neighbor count']
                 df = lambda x: density_filter(
-                    x, radius, num_neighbors,
+                    x, a, b,
                     weight_by_intensity=True,
                     weight_by_size=True,
                 )
                 functions.append(df)
         filter_spots(functions)
+
+
+    def _parse_filters(self):
+        filters = {}
+        filter_widgets_slice = slice(self.nwidgets_before_insert, -self.nwidgets_after_insert)
+        for iii, container in enumerate(self.widgets[filter_widgets_slice]):
+            params = {w.label:w.value for w in container[:-1]}  # last widget is the remove button
+            if 'percentile' in params.keys():
+                 filter_type = 'percentile'
+            elif 'radius' in params.keys():
+                 filter_type = 'density'
+            filters[iii] = {'filter_type':filter_type, 'parameters':params}
+        return filters
+
+
+    def _save(self):
+        global filtered_points_layer
+        if filtered_points_layer is not None:
+            timestamp = datetime.now().strftime('%d-%m-%y_%H-%M-%S')
+            filtered_points_layer.save(self.save_prefix + '_' + timestamp + '.csv')
+            with open(self.save_prefix + '_filter_parameters_' + timestamp + '.json', 'w') as f:
+                json.dump(self._parse_filters(), f)
 
 
 def filter_spots(functions):
@@ -175,7 +210,7 @@ if __name__ == '__main__':
     filtered_points_layer = None
 
     # add filters widget
-    filters_widget = filters_widget(viewer)
+    filters_widget = filters_widget(viewer, sys.argv[2][:-4])  # assumes .txt prefix
 
     # launch napari
     napari.run()
