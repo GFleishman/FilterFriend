@@ -117,7 +117,7 @@ class filters_widget:
         global filtered_points_layer
         if filtered_points_layer is not None:
             timestamp = datetime.now().strftime('%d-%m-%y_%H-%M-%S')
-            filtered_points_layer.save(self.save_prefix + '_' + timestamp + '.csv')
+            filtered_points_layer.save(self.save_prefix + '_filtered_spots_' + timestamp + '.csv')
             with open(self.save_prefix + '_filter_parameters_' + timestamp + '.json', 'w') as f:
                 json.dump(self._parse_filters(), f)
             self._toggle_remove_filter_buttons()
