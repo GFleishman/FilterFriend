@@ -97,6 +97,7 @@ class filters_widget:
                 )
                 functions.append(df)
         filter_spots(functions)
+        self._toggle_remove_filter_buttons()
 
 
     def _parse_filters(self):
@@ -119,6 +120,13 @@ class filters_widget:
             filtered_points_layer.save(self.save_prefix + '_' + timestamp + '.csv')
             with open(self.save_prefix + '_filter_parameters_' + timestamp + '.json', 'w') as f:
                 json.dump(self._parse_filters(), f)
+            self._toggle_remove_filter_buttons()
+
+
+    def _toggle_remove_filter_buttons(self):
+        filter_widgets_slice = slice(self.nwidgets_before_insert, -self.nwidgets_after_insert)
+        for container in self.widgets[filter_widgets_slice]:
+            container[-1].enabled = not container[-1].enabled
 
 
 def filter_spots(functions):
