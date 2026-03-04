@@ -130,9 +130,10 @@ if __name__ == '__main__':
         sys.exit()
 
     # load datasets, convert to voxel spacing, make filtering copy
-    image = nrrd.read(sys.argv[1])[0].transpose(2,1,0)
+    image, metadata = nrrd.read(sys.argv[1])
+    image = image.transpose(2,1,0)
+    spacing = np.array(metadata['spacings'])[::-1]
     original_spots = np.loadtxt(sys.argv[2])
-    spacing = np.array([float(x) for x in sys.argv[3].split('x')])
     original_spots[:, :3] = np.round(original_spots[:, :3] / spacing).astype(int)
 
     # instantiate viewer

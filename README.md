@@ -19,15 +19,16 @@ pip install .
 ```
 
 # Opening FilterFriend
-Filter friend is just a python script that runs napari. It has three required arguments:
+Filter friend is just a python script that runs napari. It has two required arguments:
 * Path to a .nrrd image file containing an EASI-FISH probe channel
 * Path to a .txt file that contains spot detections from that channel
-* The physical voxel spacing of the input image, dimensions separated with 'x', e.g. 0.8x0.5x0.5
+The nrrd image must have the correct voxel spacing set using the 'spacings' field in the header.
+The spot detection coordinates must be stored in physical units (e.g., microns).
 
 So, to open FilterFriend:
 ```bash
 cd /my/favorite/source/directory/FilterFriend
-python ./FilterFriend/filter_friend.py /path/to/image/file/c0s3.nrrd /path/to/spots/c0_spots.txt 0.8x0.5x0.5
+python ./FilterFriend/filter_friend.py /path/to/image/file/c0s3.nrrd /path/to/spots/c0_spots.txt
 ```
 
 # Using FilterFriend
@@ -44,8 +45,8 @@ Scroll through the stack again to get a sense for the types of spots that were f
 Now, you are ready to add a filter. Probably the first filter you want to add is a Percentile Filter, which is
 the default, so just click "Add Filter." The percentile filter removes all points whose intensities are below 
 a given percentile threshold. Choose a percentile value based on the approximate number of
-over-detections you see. This isn't super precise, and you'll be able to run many tests, so just go with
-something between 20 and 60. Click "Run Filters."
+over-detections you see. This isn't super precise, and you'll be able to run many tests, so for now just
+go with something between 20 and 60. Click "Run Filters."
 
 You'll see that a new layer has been added: filtered-spots. You may want to toggle the original-spots layer
 on and off to better see filtered-spots. Scroll through the stack and consider how well the filtered set
@@ -58,16 +59,16 @@ within that sphere. If the number of spots is too low, then the spot is discarde
 first value for radius is say 8.0 (that's in microns) and a reasonable neighbor count is 20. Click
 Run Filters again. Density filters are a bit slower so you may need to wait a few seconds for it to
 finish. If there are still too many spots outside the bright dense areas, then you can decrease
-the radius and increase the neighbor count - that will remove more spots overall.
+the radius and increase the neighbor count, that will remove more spots overall.
 
 When it's done, the filtered-spots layer will have been updated with the new filtering results. Importantly,
 whenever you click "Run Filters," it is starting from the original spots set. That is, multiple clicks on
 Run Filters do not stack. This ensures that the result you see is always the direct result of exactly the
-set of filters you see on screen.
+set of filters currently on the screen (unless you remove a filter, then you should click Run Filters again).
 
 You can add more filters and experiment to try and match the pattern in the image data. Let's say you're
-relatively happy with the filtered-spots but there are a few spots you'd still like to get rid of. You can
-always remove spots manually - this is a fully functional napari points layer. Select the filtered-spots layer
+relatively happy with the filtered-spots but there are a few spots you'd still like to get rid of. This is
+a fully functional napari points layer, which means You can always remove spots manually.Select the filtered-spots layer
 (so it's highlighted in blue) and at the top left make sure the arrow is selected (the tooltip says "Select Points").
 Then you can select the points you want to remove (draw a box around them) and just hit delete.
 
