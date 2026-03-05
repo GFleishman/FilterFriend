@@ -21,6 +21,7 @@ class filters_widget:
     def __init__(self, viewer, save_prefix):
         self.viewer = viewer
         self.save_prefix = save_prefix
+        self.last_filters_run = None
         self.dock_widget = None
         self.filter_menu = ComboBox(label='Filter Type', choices=FILTER_TYPES)
         self.add_filter_button = PushButton(text='Add Filter', tooltip='add filter to end of filter list')
@@ -97,7 +98,7 @@ class filters_widget:
                 )
                 functions.append(df)
         filter_spots(functions)
-        self._toggle_remove_filter_buttons()
+        self.last_filters_run = filters
 
 
     def _parse_filters(self):
@@ -119,14 +120,7 @@ class filters_widget:
             timestamp = datetime.now().strftime('%d-%m-%y_%H-%M-%S')
             filtered_points_layer.save(self.save_prefix + '_filtered_spots_' + timestamp + '.csv')
             with open(self.save_prefix + '_filter_parameters_' + timestamp + '.json', 'w') as f:
-                json.dump(self._parse_filters(), f)
-            self._toggle_remove_filter_buttons()
-
-
-    def _toggle_remove_filter_buttons(self):
-        filter_widgets_slice = slice(self.nwidgets_before_insert, -self.nwidgets_after_insert)
-        for container in self.widgets[filter_widgets_slice]:
-            container[-1].enabled = not container[-1].enabled
+                json.dump(self.last_filters_run, f)
 
 
 def filter_spots(functions):
@@ -214,8 +208,13 @@ if __name__ == '__main__':
     )
     original_points_layer.mode = 'select'
 
-    # initialize filtered points layer
+    # initialize filtered points layer, properly clear on removal
     filtered_points_layer = None
+    def on_layer_removed(event):
+        global filtered_points_layer
+        if event.value.name == 'filtered-spots':
+            filtered_points_layer = None
+    viewer.layers.events.removed.connect(on_layer_removed)
 
     # add filters widget
     filters_widget = filters_widget(viewer, sys.argv[2][:-4])  # assumes .txt prefix
