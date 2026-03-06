@@ -83,21 +83,7 @@ class filters_widget:
 
     def _run_filters(self):
         filters = self._parse_filters()
-        functions = []
-        for iii in range(len(filters.keys())):
-            if filters[iii]['filter_type'] == 'percentile':
-                a = filters[iii]['parameters']['percentile']
-                functions.append(lambda x: percentile_filter(x, a))
-            elif filters[iii]['filter_type'] == 'density':
-                a = filters[iii]['parameters']['radius']
-                b = filters[iii]['parameters']['neighbor count']
-                df = lambda x: density_filter(
-                    x, a, b,
-                    weight_by_intensity=True,
-                    weight_by_size=True,
-                )
-                functions.append(df)
-        filter_spots(functions)
+        filter_spots(filters)
         self.last_filters_run = filters
 
 
@@ -123,13 +109,23 @@ class filters_widget:
                 json.dump(self.last_filters_run, f)
 
 
-def filter_spots(functions):
+def filter_spots(filters):
     global viewer, original_spots, filtered_points_layer
 
     # filter the spots
     filtered_spots = np.copy(original_spots)
-    for function in functions:
-        filtered_spots = function(filtered_spots)
+    for iii in range(len(filters.keys())):
+        if filters[iii]['filter_type'] == 'percentile':
+            a = filters[iii]['parameters']['percentile']
+            filtered_spots = percentile_filter(filtered_spots, a)
+        elif filters[iii]['filter_type'] == 'density':
+            a = filters[iii]['parameters']['radius']
+            b = filters[iii]['parameters']['neighbor count']
+            filtered_spots = density_filter(
+                filtered_spots, a, b,
+                weight_by_intensity=True,
+                weight_by_size=True,
+            )
 
     # replace layer with updated one
     if filtered_points_layer is not None:
@@ -153,7 +149,6 @@ def filter_spots(functions):
         out_of_slice_display=True,
         blending='additive',
     )
-    filtered_points_layer.mode = 'select'
 
 
 if __name__ == '__main__':
@@ -221,3 +216,4 @@ if __name__ == '__main__':
 
     # launch napari
     napari.run()
+
